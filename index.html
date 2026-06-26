@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>PHARMAVEER — Staff Attendance</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+  --green:#0a5c44;--green2:#0d7a5c;--green3:#e6f4ef;--gold:#b8960c;--gold2:#f0c040;
+  --white:#fff;--bg:#f5f7f6;--border:#d0ddd8;--text:#1a2e26;--muted:#5a7a6e;
+  --red:#c0392b;--blue:#1a5276;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;}
+
+/* TOP NAV */
+.topnav{background:var(--green);color:#fff;padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;}
+.topnav .brand{font-size:15px;font-weight:700;}
+.topnav .nav-links{display:flex;gap:4px;}
+.nav-btn{padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;color:rgba(255,255,255,0.8);border:none;background:transparent;transition:all 0.15s;}
+.nav-btn:hover,.nav-btn.active{background:rgba(255,255,255,0.15);color:#fff;}
+
+/* PAGES */
+.page{display:none;padding:20px;max-width:900px;margin:0 auto;}
+.page.active{display:block;}
+
+/* CARDS */
+.card{background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.card-title{font-size:15px;font-weight:700;color:var(--green);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;}
+
+/* BUTTONS */
+.btn{padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:700;transition:all 0.15s;display:inline-flex;align-items:center;gap:8px;}
+.btn-primary{background:var(--green);color:#fff;} .btn-primary:hover{background:var(--green2);}
+.btn-gold{background:var(--gold);color:#fff;}
+.btn-red{background:var(--red);color:#fff;}
+.btn-outline{background:#fff;color:var(--green);border:2px solid var(--green);}
+.btn-gray{background:#e2e3e5;color:#383d41;}
+.btn-lg{padding:16px 32px;font-size:16px;border-radius:12px;width:100%;justify-content:center;}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.btn:disabled{opacity:0.5;cursor:not-allowed;}
+
+/* FORMS */
+.form-row{margin-bottom:12px;}
+.form-row label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px;}
+.form-row input,.form-row select{width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;font-size:14px;background:#fff;}
+.form-row input:focus,.form-row select:focus{outline:none;border-color:var(--green);}
+
+/* GRID */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+
+/* METRIC */
+.metric{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;}
+.metric .val{font-size:28px;font-weight:800;color:var(--green);}
+.metric .lbl{font-size:11px;color:var(--muted);margin-top:4px;}
+.metric.gold .val{color:var(--gold);} .metric.red .val{color:var(--red);} .metric.blue .val{color:var(--blue);}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;}
+table th{background:var(--green3);color:var(--green);font-size:12px;font-weight:700;padding:8px 10px;text-align:left;border-bottom:2px solid var(--border);}
+table td{padding:8px 10px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;}
+table tr:hover td{background:#f9fbfa;}
+
+/* BADGE */
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;}
+.badge-green{background:#d4edda;color:#155724;} .badge-red{background:#f8d7da;color:#721c24;}
+.badge-gold{background:#fff3cd;color:#856404;} .badge-blue{background:#d1ecf1;color:#0c5460;}
+.badge-gray{background:#e2e3e5;color:#383d41;}
+
+/* ALERT */
+.alert{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:12px;}
+.alert-success{background:#d4edda;border:1px solid #c3e6cb;color:#155724;}
+.alert-warning{background:#fff3cd;border:1px solid #ffeeba;color:#856404;}
+.alert-info{background:#d1ecf1;border:1px solid #bee5eb;color:#0c5460;}
+.alert-danger{background:#f8d7da;border:1px solid #f5c6cb;color:#721c24;}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.open{display:flex;}
+.modal{background:#fff;border-radius:16px;padding:24px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;}
+.modal h3{font-size:18px;font-weight:700;color:var(--green);margin-bottom:16px;}
+
+/* CLOCK-IN UI */
+.clock-hero{text-align:center;padding:24px 0;}
+.clock-time{font-size:52px;font-weight:900;color:var(--green);letter-spacing:2px;font-variant-numeric:tabular-nums;}
+.clock-date{font-size:16px;color:var(--muted);margin-top:4px;}
+.clock-status{margin:16px 0;padding:12px;border-radius:10px;font-weight:700;font-size:15px;}
+
+/* QR DISPLAY */
+.qr-container{display:flex;flex-direction:column;align-items:center;padding:20px;}
+#qr-display{border:4px solid var(--green);border-radius:12px;padding:12px;background:#fff;margin-bottom:12px;}
+.qr-timer{font-size:13px;color:var(--muted);text-align:center;}
+.qr-timer b{color:var(--red);font-size:16px;}
+
+/* SELFIE */
+.selfie-area{position:relative;border-radius:12px;overflow:hidden;background:#000;margin-bottom:12px;}
+#selfie-video{width:100%;display:block;transform:scaleX(-1);}
+#selfie-canvas{display:none;}
+.selfie-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+.selfie-frame{width:200px;height:200px;border:3px solid rgba(255,255,255,0.6);border-radius:50%;}
+
+/* STAFF CARD */
+.staff-card{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;}
+.staff-avatar{width:44px;height:44px;border-radius:50%;background:var(--green3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.staff-info{flex:1;}
+.staff-name{font-weight:700;font-size:14px;}
+.staff-role{font-size:12px;color:var(--muted);}
+.staff-status{font-size:12px;font-weight:700;}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--green);color:#fff;padding:14px 24px;border-radius:10px;font-size:14px;font-weight:600;z-index:2000;opacity:0;transition:all 0.3s;pointer-events:none;min-width:260px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.2);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.error{background:var(--red);}
+
+/* MOBILE */
+@media(max-width:600px){
+  .grid2,.grid3{grid-template-columns:1fr;}
+  .topnav .nav-links{gap:2px;}
+  .nav-btn{padding:4px 8px;font-size:11px;}
+  .clock-time{font-size:40px;}
+  .page{padding:12px;}
+}
+
+.sep{height:1px;background:var(--border);margin:16px 0;}
+.tab-bar{display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border);padding-bottom:0;}
+.tab{padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;}
+.tab.active{color:var(--green);border-bottom-color:var(--green);}
+.tab-content{display:none;} .tab-content.active{display:block;}
+
+.selfie-thumb{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--green);}
+</style>
+</head>
+<body>
+
+<div class="topnav">
+  <div class="brand">⚕ PHARMAVEER Attendance</div>
+  <div class="nav-links">
+    <button class="nav-btn active" onclick="showPage('clockin')">🕐 Clock In/Out</button>
+    <button class="nav-btn" onclick="showPage('admin')">📊 Admin</button>
+    <button class="nav-btn" onclick="showPage('staff')">👥 Staff</button>
+    <button class="nav-btn" onclick="showPage('qrpage')">📱 QR Code</button>
+    <button class="nav-btn" onclick="showPage('setup')">⚙️ Setup</button>
+  </div>
+</div>
+
+<!-- ═══════════════ CLOCK IN/OUT PAGE ═══════════════ -->
+<div class="page active" id="page-clockin">
+  <div class="clock-hero">
+    <div class="clock-time" id="live-clock">--:--:--</div>
+    <div class="clock-date" id="live-date">Loading...</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:4px;">Singapore Time (SGT)</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔐 Staff Clock In / Out</div>
+
+    <div class="tab-bar">
+      <div class="tab active" onclick="switchTab('tab-qr')">📱 QR Code Scan</div>
+      <div class="tab" onclick="switchTab('tab-manual')">✏️ Manual Login</div>
+    </div>
+
+    <!-- QR TAB -->
+    <div class="tab-content active" id="tab-qr">
+      <div class="alert alert-info">📱 Staff: Open your phone camera and scan the QR code on the <b>Admin screen / clinic display</b>. Or ask admin to show the QR page on a tablet at the entrance.</div>
+      <div style="text-align:center;margin-top:8px;">
+        <button class="btn btn-outline" onclick="showPage('qrpage')">📱 Show QR Code Display →</button>
+      </div>
+      <div class="sep"></div>
+      <div class="alert alert-info">💡 If you received a clock-in link via WhatsApp/email, just open that link on your phone. The system will ask for your ID and take a selfie automatically.</div>
+    </div>
+
+    <!-- MANUAL TAB -->
+    <div class="tab-content" id="tab-manual">
+      <div class="alert alert-warning">⚠️ Manual login is for when phone is unavailable. Admin can verify via email or phone number.</div>
+      <div class="form-row">
+        <label>Your Email or Phone Number</label>
+        <input type="text" id="manual-id" placeholder="e.g. john@email.com or +6591234567">
+      </div>
+      <div class="form-row">
+        <label>PIN (4 digits)</label>
+        <input type="password" id="manual-pin" maxlength="4" placeholder="Enter your 4-digit PIN">
+      </div>
+      <div class="form-row">
+        <label>Action</label>
+        <select id="manual-action">
+          <option value="Clock In">Clock In</option>
+          <option value="Clock Out">Clock Out</option>
+          <option value="Break Start">Break Start</option>
+          <option value="Break End">Break End</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Notes (optional)</label>
+        <input type="text" id="manual-notes" placeholder="e.g. Working from home today">
+      </div>
+      <button class="btn btn-primary btn-lg" onclick="manualClockIn()">✅ Submit Attendance</button>
+    </div>
+  </div>
+
+  <!-- TODAY'S LOG -->
+  <div class="card">
+    <div class="card-title">📋 Today's Attendance Log
+      <button class="btn btn-outline btn-sm" onclick="loadTodayLog()">↺ Refresh</button>
+    </div>
+    <table id="tbl-today">
+      <tr><th>Staff</th><th>Action</th><th>Time</th><th>Method</th><th>Selfie</th><th>Flag</th></tr>
+      <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px;">Loading...</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════ QR CODE DISPLAY PAGE ═══════════════ -->
+<div class="page" id="page-qrpage">
+  <div class="card">
+    <div class="card-title">📱 QR Code — Staff Scan This To Clock In/Out
+      <span id="qr-status-badge" class="badge badge-green">● Active</span>
+    </div>
+    <div class="alert alert-info">🖥️ Display this page on a tablet or screen at your clinic entrance. QR code refreshes every 5 minutes automatically for security — screenshots cannot be reused.</div>
+
+    <div class="qr-container">
+      <div id="qr-display"></div>
+      <div class="qr-timer">Refreshes in: <b id="qr-countdown">5:00</b></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;">Token: <span id="qr-token-display" style="font-family:monospace;">...</span></div>
+    </div>
+
+    <div class="sep"></div>
+    <div style="text-align:center;">
+      <div style="font-size:14px;font-weight:700;color:var(--green);margin-bottom:8px;">⚕ PHARMAVEER PTE. LTD.</div>
+      <div style="font-size:12px;color:var(--muted);">114 Jurong East Street 13, #01-406 | Singapore 600114</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;">Scan QR → Enter your Staff ID → Take selfie → Done</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 Live Status — Who's In Today</div>
+    <div id="live-status-list">Loading...</div>
+  </div>
+</div>
+
+<!-- ═══════════════ SCAN LANDING PAGE (opened from QR) ═══════════════ -->
+<div class="page" id="page-scan">
+  <div class="card" style="max-width:400px;margin:0 auto;">
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:32px;">⚕</div>
+      <div style="font-weight:800;font-size:18px;color:var(--green);">PHARMAVEER</div>
+      <div style="font-size:12px;color:var(--muted);">Staff Attendance System</div>
+    </div>
+
+    <div id="scan-step1">
+      <div class="alert alert-info" id="scan-token-alert">Verifying QR code...</div>
+      <div class="form-row">
+        <label>Your Email or Phone Number</label>
+        <input type="text" id="scan-id" placeholder="email or phone number">
+      </div>
+      <div class="form-row">
+        <label>PIN</label>
+        <input type="password" id="scan-pin" maxlength="4" placeholder="4-digit PIN">
+      </div>
+      <div class="form-row">
+        <label>Action</label>
+        <select id="scan-action">
+          <option value="Clock In">🟢 Clock In</option>
+          <option value="Clock Out">🔴 Clock Out</option>
+          <option value="Break Start">☕ Break Start</option>
+          <option value="Break End">▶️ Break End</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-lg" onclick="proceedToSelfie()">📸 Next — Take Selfie</button>
+    </div>
+
+    <div id="scan-step2" style="display:none;">
+      <div style="text-align:center;margin-bottom:12px;font-weight:700;color:var(--green);">📸 Take a Selfie to Confirm</div>
+      <div class="selfie-area">
+        <video id="selfie-video" autoplay playsinline></video>
+        <div class="selfie-overlay"><div class="selfie-frame"></div></div>
+      </div>
+      <canvas id="selfie-canvas"></canvas>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="captureSelfie()">📸 Capture Selfie</button>
+        <button class="btn btn-gray" style="flex:1;" onclick="skipSelfie()">Skip (No Camera)</button>
+      </div>
+      <div id="selfie-preview" style="display:none;text-align:center;margin-bottom:12px;">
+        <img id="selfie-img" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:3px solid var(--green);">
+        <div style="margin-top:8px;font-size:13px;color:var(--green);font-weight:600;">✅ Selfie captured!</div>
+      </div>
+      <button class="btn btn-gold btn-lg" id="submit-btn" onclick="submitAttendance()" disabled>✅ Submit Attendance</button>
+    </div>
+
+    <div id="scan-step3" style="display:none;text-align:center;padding:20px 0;">
+      <div style="font-size:56px;margin-bottom:12px;">✅</div>
+      <div style="font-size:22px;font-weight:800;color:var(--green);" id="scan-success-msg">Clocked In!</div>
+      <div style="font-size:14px;color:var(--muted);margin-top:8px;" id="scan-success-time"></div>
+      <div style="font-size:13px;color:var(--muted);margin-top:16px;">This page will close in <span id="scan-countdown">5</span>s</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ ADMIN DASHBOARD ═══════════════ -->
+<div class="page" id="page-admin">
+  <div class="grid3" style="margin-bottom:16px;">
+    <div class="metric"><div class="val" id="m-present">—</div><div class="lbl">Present Today</div></div>
+    <div class="metric red"><div class="val" id="m-absent">—</div><div class="lbl">Absent Today</div></div>
+    <div class="metric gold"><div class="val" id="m-late">—</div><div class="lbl">Late Today</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 Attendance Report
+      <div style="display:flex;gap:8px;">
+        <input type="date" id="filter-date" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+        <button class="btn btn-outline btn-sm" onclick="loadAdminReport()">Filter</button>
+        <button class="btn btn-primary btn-sm" onclick="exportCSV()">📥 Export CSV</button>
+      </div>
+    </div>
+    <table id="tbl-admin">
+      <tr><th>Staff</th><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Hours</th><th>Method</th><th>Selfie</th><th>Flag</th></tr>
+      <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px;">Loading...</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📜 Raw Log (All Entries)</div>
+    <table id="tbl-rawlog">
+      <tr><th>Time</th><th>Staff</th><th>Action</th><th>Method</th><th>Selfie</th><th>Flag</th></tr>
+      <tr><td colspan="6" style="text-align:center;color:var(--muted);">Loading...</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════ STAFF MANAGEMENT ═══════════════ -->
+<div class="page" id="page-staff">
+  <div class="card">
+    <div class="card-title">👥 Staff Management
+      <button class="btn btn-primary btn-sm" onclick="openModal('addStaff')">+ Add Staff</button>
+    </div>
+    <table id="tbl-staff">
+      <tr><th>Code</th><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>PIN</th><th>Status</th><th>Action</th></tr>
+      <tr><td colspan="8" style="text-align:center;color:var(--muted);">Loading...</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📱 Send Clock-In Link to Staff</div>
+    <div class="alert alert-info">Each link is unique to your clinic's QR. Share via WhatsApp or Email — staff just tap the link on their phone to clock in.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="copyClockInLink()">📋 Copy Clock-In Link</button>
+      <button class="btn btn-gold" onclick="shareWhatsApp()">💬 Share via WhatsApp</button>
+    </div>
+    <div id="link-display" style="margin-top:12px;padding:10px;background:var(--bg);border-radius:8px;font-size:12px;font-family:monospace;word-break:break-all;display:none;"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ SETUP PAGE ═══════════════ -->
+<div class="page" id="page-setup">
+  <div class="card">
+    <div class="card-title">🗄️ Database Setup — Run Once in Supabase</div>
+    <div class="alert alert-warning">Go to supabase.com → SQL Editor → paste this SQL → Run without RLS</div>
+    <textarea readonly rows="20" style="width:100%;font-family:monospace;font-size:11px;padding:10px;border:1px solid var(--border);border-radius:6px;background:#f8faf9;" onclick="this.select()" id="setup-sql"></textarea>
+    <div style="margin-top:12px;display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="testAttConnection()">🔌 Test Connection</button>
+      <button class="btn btn-outline" onclick="copySetupSQL()">📋 Copy SQL</button>
+    </div>
+    <div id="setup-result" style="margin-top:12px;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">⚙️ Attendance Settings</div>
+    <div class="grid2">
+      <div class="form-row"><label>Work Start Time</label><input type="time" id="set-start" value="09:00"></div>
+      <div class="form-row"><label>Work End Time</label><input type="time" id="set-end" value="18:00"></div>
+      <div class="form-row"><label>Late After (minutes)</label><input type="number" id="set-late" value="15"></div>
+      <div class="form-row"><label>QR Refresh (minutes)</label><input type="number" id="set-qr" value="5"></div>
+    </div>
+    <button class="btn btn-primary" onclick="saveAttSettings()">💾 Save Settings</button>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-addStaff">
+  <div class="modal">
+    <h3>👤 Add New Staff</h3>
+    <div class="form-row"><label>Full Name *</label><input type="text" id="ns-name" placeholder="Full Name"></div>
+    <div class="form-row"><label>Email *</label><input type="email" id="ns-email" placeholder="staff@email.com"></div>
+    <div class="form-row"><label>Phone (with country code)</label><input type="text" id="ns-phone" placeholder="+6591234567"></div>
+    <div class="form-row"><label>Role</label><select id="ns-role"><option>Staff</option><option>Manager</option><option>Doctor</option><option>Nurse</option><option>Admin</option></select></div>
+    <div class="form-row"><label>Location Type</label><select id="ns-loc"><option value="clinic">Clinic (on-site)</option><option value="remote">Remote / Home</option><option value="both">Both</option></select></div>
+    <div class="form-row"><label>PIN (4 digits) *</label><input type="password" id="ns-pin" maxlength="4" placeholder="Set a 4-digit PIN"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn btn-primary" onclick="saveStaff()" style="flex:1;">💾 Save Staff</button>
+      <button class="btn btn-gray" onclick="closeModal('addStaff')" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-viewSelfie">
+  <div class="modal" style="text-align:center;">
+    <h3>📸 Selfie Verification</h3>
+    <img id="modal-selfie-img" style="width:200px;height:200px;border-radius:50%;object-fit:cover;border:4px solid var(--green);margin-bottom:12px;">
+    <div id="modal-selfie-info" style="font-size:13px;color:var(--muted);margin-bottom:16px;"></div>
+    <div style="display:flex;gap:8px;justify-content:center;">
+      <button class="btn btn-primary" onclick="closeModal('viewSelfie')">✅ Verified</button>
+      <button class="btn btn-red" onclick="flagEntry()">🚩 Flag as Suspicious</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════
+// SUPABASE
+// ═══════════════════════════════════
+const SUPABASE_URL = 'https://snhtmelqilfjexkrphts.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuaHRtZWxxaWxmamV4a3JwaHRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0MzQ2NTIsImV4cCI6MjA5ODAxMDY1Mn0.TD67ofX60UtQzjzceHnttdeiDeb4G533_UZyJsuC5uk';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ═══════════════════════════════════
+// STATE
+// ═══════════════════════════════════
+let currentQRToken = '';
+let qrInterval, clockInterval, countdownInterval;
+let selfieData = null;
+let scanStaffData = null;
+let currentFlagId = null;
+let qrSecondsLeft = 300;
+
+// ═══════════════════════════════════
+// NAV & TABS
+// ═══════════════════════════════════
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>{
+    if(b.getAttribute('onclick')&&b.getAttribute('onclick').includes("'"+id+"'")) b.classList.add('active');
+  });
+  if(id==='admin') loadAdminReport();
+  if(id==='staff') loadStaff();
+  if(id==='clockin') loadTodayLog();
+  if(id==='qrpage'){ generateQR(); loadLiveStatus(); }
+  if(id==='scan') checkScanToken();
+}
+function switchTab(id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ═══════════════════════════════════
+// LIVE CLOCK (Singapore Time)
+// ═══════════════════════════════════
+function updateClock(){
+  const now = new Date();
+  const sg = new Date(now.toLocaleString('en-US',{timeZone:'Asia/Singapore'}));
+  const h=sg.getHours().toString().padStart(2,'0');
+  const m=sg.getMinutes().toString().padStart(2,'0');
+  const s=sg.getSeconds().toString().padStart(2,'0');
+  const el=document.getElementById('live-clock');
+  if(el) el.textContent=h+':'+m+':'+s;
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const el2=document.getElementById('live-date');
+  if(el2) el2.textContent=days[sg.getDay()]+', '+sg.getDate()+' '+months[sg.getMonth()]+' '+sg.getFullYear();
+}
+setInterval(updateClock,1000); updateClock();
+
+function getSGDate(){
+  const now=new Date();
+  const sg=new Date(now.toLocaleString('en-US',{timeZone:'Asia/Singapore'}));
+  return sg.getFullYear()+'-'+(sg.getMonth()+1).toString().padStart(2,'0')+'-'+sg.getDate().toString().padStart(2,'0');
+}
+function getSGTime(){
+  const now=new Date();
+  const sg=new Date(now.toLocaleString('en-US',{timeZone:'Asia/Singapore'}));
+  return sg.getHours().toString().padStart(2,'0')+':'+sg.getMinutes().toString().padStart(2,'0');
+}
+function getSGDateTime(){
+  const now=new Date();
+  return new Date(now.toLocaleString('en-US',{timeZone:'Asia/Singapore'})).toISOString();
+}
+
+// ═══════════════════════════════════
+// QR CODE GENERATION
+// ═══════════════════════════════════
+function generateToken(){
+  return Math.random().toString(36).substring(2,10).toUpperCase()+Date.now().toString(36).toUpperCase();
+}
+async function generateQR(){
+  const token = generateToken();
+  currentQRToken = token;
+  const validUntil = new Date(Date.now()+300000).toISOString();
+  try{
+    await db.from('att_qr_tokens').delete().lt('valid_until', new Date().toISOString());
+    await db.from('att_qr_tokens').insert({token, valid_from:new Date().toISOString(), valid_until:validUntil});
+  } catch(e){}
+  const clockInUrl = window.location.href.split('?')[0]+'?scan='+token;
+  const qrDiv = document.getElementById('qr-display');
+  if(qrDiv){
+    qrDiv.innerHTML='';
+    try{
+      new QRCode(qrDiv,{text:clockInUrl,width:200,height:200,colorDark:'#0a5c44',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
+    } catch(e){ qrDiv.innerHTML='<div style="padding:20px;text-align:center;font-size:12px;">QR: '+token+'</div>'; }
+    const td=document.getElementById('qr-token-display');
+    if(td) td.textContent=token;
+  }
+  qrSecondsLeft = 300;
+  startQRCountdown();
+}
+function startQRCountdown(){
+  clearInterval(countdownInterval);
+  countdownInterval = setInterval(()=>{
+    qrSecondsLeft--;
+    const el=document.getElementById('qr-countdown');
+    if(el){
+      const m=Math.floor(qrSecondsLeft/60), s=qrSecondsLeft%60;
+      el.textContent=m+':'+s.toString().padStart(2,'0');
+    }
+    if(qrSecondsLeft<=0){ clearInterval(countdownInterval); generateQR(); }
+  },1000);
+}
+
+// ═══════════════════════════════════
+// QR SCAN LANDING
+// ═══════════════════════════════════
+function checkScanToken(){
+  const params=new URLSearchParams(window.location.search);
+  const token=params.get('scan');
+  const alertEl=document.getElementById('scan-token-alert');
+  if(!token){
+    if(alertEl) alertEl.innerHTML='<span style="color:var(--red);">⚠️ No QR token found. Please scan a valid QR code.</span>';
+    alertEl.className='alert alert-warning'; return;
+  }
+  db.from('att_qr_tokens').select('*').eq('token',token).gt('valid_until',new Date().toISOString()).then(({data})=>{
+    if(!data||data.length===0){
+      if(alertEl){ alertEl.innerHTML='⏰ This QR code has expired. Please scan the current QR code at the clinic.'; alertEl.className='alert alert-warning'; }
+    } else {
+      if(alertEl){ alertEl.innerHTML='✅ Valid QR code. Please enter your details below.'; alertEl.className='alert alert-success'; }
+      window._scanToken=token;
+    }
+  });
+}
+
+async function proceedToSelfie(){
+  const idVal=document.getElementById('scan-id').value.trim();
+  const pin=document.getElementById('scan-pin').value.trim();
+  if(!idVal||!pin){ showToast('Please enter your email/phone and PIN','error'); return; }
+  const {data,error}=await db.from('att_staff').select('*').eq('is_active',true)
+    .or('email.eq.'+idVal+',phone.eq.'+idVal);
+  if(error||!data||data.length===0){ showToast('❌ Staff not found. Check your email/phone.','error'); return; }
+  const staff=data[0];
+  if(staff.pin!==pin){ showToast('❌ Incorrect PIN. Try again.','error'); return; }
+  scanStaffData=staff;
+  document.getElementById('scan-step1').style.display='none';
+  document.getElementById('scan-step2').style.display='block';
+  startCamera();
+}
+
+async function startCamera(){
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
+    const video=document.getElementById('selfie-video');
+    if(video){ video.srcObject=stream; window._cameraStream=stream; }
+  } catch(e){ showToast('Camera not available. Tap Skip.','error'); }
+}
+
+function captureSelfie(){
+  const video=document.getElementById('selfie-video');
+  const canvas=document.getElementById('selfie-canvas');
+  if(!video||!canvas) return;
+  canvas.width=300; canvas.height=300;
+  const ctx=canvas.getContext('2d');
+  ctx.save(); ctx.scale(-1,1); ctx.drawImage(video,-300,0,300,300); ctx.restore();
+  selfieData=canvas.toDataURL('image/jpeg',0.7);
+  const img=document.getElementById('selfie-img');
+  if(img) img.src=selfieData;
+  document.getElementById('selfie-preview').style.display='block';
+  document.getElementById('submit-btn').disabled=false;
+  if(window._cameraStream) window._cameraStream.getTracks().forEach(t=>t.stop());
+  showToast('📸 Selfie captured!');
+}
+function skipSelfie(){
+  selfieData=null;
+  document.getElementById('submit-btn').disabled=false;
+  if(window._cameraStream) window._cameraStream.getTracks().forEach(t=>t.stop());
+  showToast('Selfie skipped — admin will verify manually');
+}
+
+async function submitAttendance(){
+  if(!scanStaffData){ showToast('Session expired. Please scan again.','error'); return; }
+  const action=document.getElementById('scan-action').value;
+  const flagged=!selfieData;
+  const {error}=await db.from('att_logs').insert({
+    staff_id:scanStaffData.id, staff_name:scanStaffData.full_name,
+    staff_code:scanStaffData.staff_code, action,
+    date_sg:getSGDate(), time_sg:getSGTime(),
+    method:'qr', selfie_data:selfieData||null,
+    qr_token_used:window._scanToken||'',
+    flagged, flag_reason:flagged?'No selfie captured':null
+  });
+  if(error){ showToast('❌ Error saving. Try again.','error'); return; }
+  document.getElementById('scan-step2').style.display='none';
+  document.getElementById('scan-step3').style.display='block';
+  document.getElementById('scan-success-msg').textContent=action+' recorded for '+scanStaffData.full_name+'!';
+  document.getElementById('scan-success-time').textContent='Time: '+getSGTime()+' SGT | Date: '+getSGDate();
+  let c=5;
+  const el=document.getElementById('scan-countdown');
+  const t=setInterval(()=>{ c--; if(el) el.textContent=c; if(c<=0){ clearInterval(t); window.location.href=window.location.href.split('?')[0]; }},1000);
+  showToast('✅ '+action+' recorded!');
+}
+
+// ═══════════════════════════════════
+// MANUAL CLOCK IN
+// ═══════════════════════════════════
+async function manualClockIn(){
+  const idVal=document.getElementById('manual-id').value.trim();
+  const pin=document.getElementById('manual-pin').value.trim();
+  const action=document.getElementById('manual-action').value;
+  const notes=document.getElementById('manual-notes').value;
+  if(!idVal||!pin){ showToast('Please enter email/phone and PIN','error'); return; }
+  const {data,error}=await db.from('att_staff').select('*').eq('is_active',true)
+    .or('email.eq.'+idVal+',phone.eq.'+idVal);
+  if(error||!data||data.length===0){ showToast('❌ Staff not found','error'); return; }
+  const staff=data[0];
+  if(staff.pin!==pin){ showToast('❌ Incorrect PIN','error'); return; }
+  const {error:e2}=await db.from('att_logs').insert({
+    staff_id:staff.id, staff_name:staff.full_name, staff_code:staff.staff_code,
+    action, date_sg:getSGDate(), time_sg:getSGTime(),
+    method:'manual', notes, flagged:true, flag_reason:'Manual entry — no selfie'
+  });
+  if(e2){ showToast('❌ Error: '+e2.message,'error'); return; }
+  showToast('✅ '+action+' recorded for '+staff.full_name+' (Manual)');
+  document.getElementById('manual-id').value='';
+  document.getElementById('manual-pin').value='';
+  document.getElementById('manual-notes').value='';
+  loadTodayLog();
+}
+
+// ═══════════════════════════════════
+// TODAY'S LOG
+// ═══════════════════════════════════
+async function loadTodayLog(){
+  const t=document.getElementById('tbl-today');
+  if(!t) return;
+  try{
+    const {data,error}=await db.from('att_logs').select('*').eq('date_sg',getSGDate()).order('created_at',{ascending:false});
+    if(error) throw error;
+    if(!data||data.length===0){
+      t.innerHTML='<tr><th>Staff</th><th>Action</th><th>Time</th><th>Method</th><th>Selfie</th><th>Flag</th></tr><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px;">No entries today yet.</td></tr>'; return;
+    }
+    t.innerHTML='<tr><th>Staff</th><th>Action</th><th>Time</th><th>Method</th><th>Selfie</th><th>Flag</th></tr>'+
+      data.map(r=>`<tr>
+        <td><b>${r.staff_name}</b><br><small>${r.staff_code}</small></td>
+        <td><span class="badge ${r.action==='Clock In'?'badge-green':r.action==='Clock Out'?'badge-red':'badge-blue'}">${r.action}</span></td>
+        <td>${r.time_sg}</td>
+        <td><span class="badge badge-gray">${r.method}</span></td>
+        <td>${r.selfie_data?`<img src="${r.selfie_data}" class="selfie-thumb" onclick="viewSelfie('${r.id}')" style="cursor:pointer;" title="Click to verify">`:'<span style="color:var(--muted);font-size:11px;">None</span>'}</td>
+        <td>${r.flagged?`<span class="badge badge-red">🚩 ${r.flag_reason||'Flagged'}</span>`:'<span class="badge badge-green">✅ OK</span>'}</td>
+      </tr>`).join('');
+  } catch(e){ t.innerHTML='<tr><td colspan="6" style="color:red;padding:12px;">Run DB Setup first.</td></tr>'; }
+}
+
+// ═══════════════════════════════════
+// ADMIN REPORT
+// ═══════════════════════════════════
+async function loadAdminReport(){
+  const dateFilter=document.getElementById('filter-date')?.value||getSGDate();
+  const t1=document.getElementById('tbl-admin');
+  const t2=document.getElementById('tbl-rawlog');
+  try{
+    const {data,error}=await db.from('att_logs').select('*').eq('date_sg',dateFilter).order('created_at',{ascending:false});
+    if(error) throw error;
+    // metrics
+    const staffIn=new Set(data.filter(r=>r.action==='Clock In').map(r=>r.staff_id));
+    const staffLate=data.filter(r=>r.action==='Clock In'&&r.time_sg>'09:15').length;
+    const {data:allStaff}=await db.from('att_staff').select('id').eq('is_active',true);
+    const totalStaff=allStaff?.length||0;
+    document.getElementById('m-present').textContent=staffIn.size;
+    document.getElementById('m-absent').textContent=Math.max(0,totalStaff-staffIn.size);
+    document.getElementById('m-late').textContent=staffLate;
+    // raw log
+    if(!data||data.length===0){
+      t1.innerHTML='<tr><th>Staff</th><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Hours</th><th>Method</th><th>Selfie</th><th>Flag</th></tr><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px;">No entries for this date.</td></tr>';
+      t2.innerHTML='<tr><th>Time</th><th>Staff</th><th>Action</th><th>Method</th><th>Selfie</th><th>Flag</th></tr><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px;">No entries.</td></tr>'; return;
+    }
+    // summarise by staff
+    const byStaff={};
+    data.forEach(r=>{
+      if(!byStaff[r.staff_id]) byStaff[r.staff_id]={name:r.staff_name,code:r.staff_code,in:null,out:null,method:r.method,selfie:r.selfie_data,flag:r.flagged};
+      if(r.action==='Clock In'&&(!byStaff[r.staff_id].in||r.time_sg<byStaff[r.staff_id].in)) byStaff[r.staff_id].in=r.time_sg;
+      if(r.action==='Clock Out'&&(!byStaff[r.staff_id].out||r.time_sg>byStaff[r.staff_id].out)) byStaff[r.staff_id].out=r.time_sg;
+    });
+    t1.innerHTML='<tr><th>Staff</th><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Hours</th><th>Method</th><th>Selfie</th><th>Flag</th></tr>'+
+      Object.values(byStaff).map(s=>{
+        let hours='—';
+        if(s.in&&s.out){
+          const [ih,im]=s.in.split(':').map(Number);
+          const [oh,om]=s.out.split(':').map(Number);
+          hours=((oh*60+om-ih*60-im)/60).toFixed(1)+'h';
+        }
+        return `<tr>
+          <td><b>${s.name}</b></td><td>${dateFilter}</td>
+          <td>${s.in?`<span class="badge badge-green">${s.in}</span>`:'—'}</td>
+          <td>${s.out?`<span class="badge badge-red">${s.out}</span>`:'—'}</td>
+          <td>${hours}</td><td>${s.method}</td>
+          <td>${s.selfie?`<img src="${s.selfie}" class="selfie-thumb" style="cursor:pointer;" title="Click to verify">`:'None'}</td>
+          <td>${s.flag?'<span class="badge badge-red">🚩 Flagged</span>':'<span class="badge badge-green">✅ OK</span>'}</td>
+        </tr>`;
+      }).join('');
+    t2.innerHTML='<tr><th>Time</th><th>Staff</th><th>Action</th><th>Method</th><th>Selfie</th><th>Flag</th></tr>'+
+      data.map(r=>`<tr>
+        <td>${r.time_sg}</td><td>${r.staff_name}</td>
+        <td><span class="badge ${r.action==='Clock In'?'badge-green':r.action==='Clock Out'?'badge-red':'badge-blue'}">${r.action}</span></td>
+        <td>${r.method}</td>
+        <td>${r.selfie_data?`<img src="${r.selfie_data}" class="selfie-thumb" onclick="viewSelfie('${r.id}')" style="cursor:pointer;">`:'—'}</td>
+        <td>${r.flagged?'<span class="badge badge-red">🚩</span>':'<span class="badge badge-green">✅</span>'}</td>
+      </tr>`).join('');
+  } catch(e){ console.error(e); }
+}
+
+// ═══════════════════════════════════
+// LIVE STATUS (QR PAGE)
+// ═══════════════════════════════════
+async function loadLiveStatus(){
+  const el=document.getElementById('live-status-list');
+  if(!el) return;
+  try{
+    const {data:staff}=await db.from('att_staff').select('*').eq('is_active',true);
+    const {data:logs}=await db.from('att_logs').select('*').eq('date_sg',getSGDate()).order('created_at',{ascending:false});
+    if(!staff||staff.length===0){ el.innerHTML='<p style="color:var(--muted);text-align:center;padding:12px;">No staff added yet.</p>'; return; }
+    const lastAction={};
+    (logs||[]).forEach(l=>{ if(!lastAction[l.staff_id]) lastAction[l.staff_id]=l; });
+    el.innerHTML=staff.map(s=>{
+      const log=lastAction[s.id];
+      const isIn=log&&log.action==='Clock In';
+      const status=log?log.action:'Not clocked in';
+      const time=log?log.time_sg:'—';
+      return `<div class="staff-card">
+        <div class="staff-avatar">${s.full_name.charAt(0)}</div>
+        <div class="staff-info"><div class="staff-name">${s.full_name}</div><div class="staff-role">${s.role} · ${s.location_type}</div></div>
+        <div><div class="staff-status" style="color:${isIn?'var(--green)':log?'var(--red)':'var(--muted)'}">${isIn?'🟢':'🔴'} ${status}</div><div style="font-size:11px;color:var(--muted);">${time}</div></div>
+        ${log?.selfie_data?`<img src="${log.selfie_data}" class="selfie-thumb">`:''}
+      </div>`;
+    }).join('');
+  } catch(e){}
+}
+
+// ═══════════════════════════════════
+// SELFIE VIEWER
+// ═══════════════════════════════════
+async function viewSelfie(id){
+  const {data}=await db.from('att_logs').select('*').eq('id',id).single();
+  if(!data) return;
+  const img=document.getElementById('modal-selfie-img');
+  const info=document.getElementById('modal-selfie-info');
+  if(img) img.src=data.selfie_data||'';
+  if(info) info.textContent=data.staff_name+' | '+data.action+' | '+data.time_sg+' | '+data.date_sg;
+  currentFlagId=id;
+  openModal('viewSelfie');
+}
+async function flagEntry(){
+  if(!currentFlagId) return;
+  await db.from('att_logs').update({flagged:true,flag_reason:'Flagged by admin after selfie review'}).eq('id',currentFlagId);
+  showToast('🚩 Entry flagged for review');
+  closeModal('viewSelfie');
+  loadAdminReport(); loadTodayLog();
+}
+
+// ═══════════════════════════════════
+// STAFF MANAGEMENT
+// ═══════════════════════════════════
+async function loadStaff(){
+  const t=document.getElementById('tbl-staff');
+  if(!t) return;
+  try{
+    const {data,error}=await db.from('att_staff').select('*').order('created_at',{ascending:false});
+    if(error) throw error;
+    if(!data||data.length===0){ t.innerHTML='<tr><th>Code</th><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>PIN</th><th>Status</th><th>Action</th></tr><tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px;">No staff yet. Add your first staff member.</td></tr>'; return; }
+    t.innerHTML='<tr><th>Code</th><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>PIN</th><th>Status</th><th>Action</th></tr>'+
+      data.map(s=>`<tr>
+        <td>${s.staff_code}</td><td><b>${s.full_name}</b></td><td>${s.email||'—'}</td>
+        <td>${s.phone||'—'}</td><td>${s.role}</td><td style="font-family:monospace;">${s.pin||'—'}</td>
+        <td><span class="badge ${s.is_active?'badge-green':'badge-gray'}">${s.is_active?'Active':'Inactive'}</span></td>
+        <td><button class="btn btn-red btn-sm" onclick="deactivateStaff('${s.id}')">Remove</button></td>
+      </tr>`).join('');
+  } catch(e){ t.innerHTML='<tr><td colspan="8" style="color:red;padding:12px;">Run DB Setup first.</td></tr>'; }
+}
+async function saveStaff(){
+  const name=document.getElementById('ns-name').value.trim();
+  const email=document.getElementById('ns-email').value.trim();
+  const pin=document.getElementById('ns-pin').value.trim();
+  if(!name||!email||!pin){ showToast('Name, email and PIN are required','error'); return; }
+  if(pin.length!==4||isNaN(pin)){ showToast('PIN must be exactly 4 digits','error'); return; }
+  const {error}=await db.from('att_staff').insert({
+    full_name:name, email, phone:document.getElementById('ns-phone').value,
+    role:document.getElementById('ns-role').value,
+    location_type:document.getElementById('ns-loc').value,
+    pin, staff_code:'STF-'+Date.now().toString().slice(-4)
+  });
+  if(error){ showToast('❌ '+error.message,'error'); return; }
+  showToast('✅ Staff "'+name+'" added!');
+  closeModal('addStaff'); loadStaff();
+}
+async function deactivateStaff(id){
+  if(!confirm('Remove this staff member from active attendance? Their records will be kept.')) return;
+  await db.from('att_staff').update({is_active:false}).eq('id',id);
+  showToast('Staff deactivated'); loadStaff();
+}
+
+// ═══════════════════════════════════
+// SHARE LINK
+// ═══════════════════════════════════
+function copyClockInLink(){
+  const link=window.location.href.split('?')[0]+'?scan=LIVE';
+  navigator.clipboard.writeText(link).catch(()=>{});
+  const el=document.getElementById('link-display');
+  if(el){ el.textContent=link; el.style.display='block'; }
+  showToast('📋 Link copied! Share with staff via WhatsApp');
+}
+function shareWhatsApp(){
+  const link=encodeURIComponent(window.location.href.split('?')[0]);
+  window.open('https://wa.me/?text='+encodeURIComponent('⚕ PHARMAVEER Attendance\nClick to clock in/out:\n'+window.location.href.split('?')[0]+'\n\nYou will need your email and PIN.'));
+}
+
+// ═══════════════════════════════════
+// EXPORT CSV
+// ═══════════════════════════════════
+async function exportCSV(){
+  const dateFilter=document.getElementById('filter-date')?.value||getSGDate();
+  const {data}=await db.from('att_logs').select('*').eq('date_sg',dateFilter).order('created_at',{ascending:true});
+  if(!data||data.length===0){ showToast('No data to export','error'); return; }
+  const rows=[['Staff Code','Staff Name','Action','Date','Time','Method','Flagged','Flag Reason','Notes']];
+  data.forEach(r=>rows.push([r.staff_code,r.staff_name,r.action,r.date_sg,r.time_sg,r.method,r.flagged?'YES':'NO',r.flag_reason||'',r.notes||'']));
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='attendance_'+dateFilter+'.csv'; a.click();
+  showToast('📥 CSV exported!');
+}
+
+// ═══════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════
+async function saveAttSettings(){
+  const fields=[['work_start','set-start'],['work_end','set-end'],['late_threshold_mins','set-late'],['qr_rotation_mins','set-qr']];
+  for(const [key,id] of fields){
+    await db.from('att_settings').upsert({key,value:document.getElementById(id).value},{onConflict:'key'});
+  }
+  showToast('✅ Settings saved!');
+}
+async function testAttConnection(){
+  const r=document.getElementById('setup-result');
+  try{
+    const {data,error}=await db.from('att_staff').select('id').limit(1);
+    if(error) throw error;
+    r.innerHTML='<div class="alert alert-success">✅ Attendance database connected! Tables are ready.</div>';
+  } catch(e){
+    r.innerHTML='<div class="alert alert-warning">⚠️ Tables not found. Run the SQL in Supabase first.<br><small>'+e.message+'</small></div>';
+  }
+}
+function copySetupSQL(){
+  const el=document.getElementById('setup-sql');
+  if(el){ el.select(); document.execCommand('copy'); showToast('📋 SQL copied!'); }
+}
+
+// ═══════════════════════════════════
+// MODAL & TOAST
+// ═══════════════════════════════════
+function openModal(id){ document.getElementById('modal-'+id).classList.add('open'); }
+function closeModal(id){ document.getElementById('modal-'+id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('open'); }));
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open')); });
+
+let toastT;
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast'+(type==='error'?' error':'')+' show';
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+// ═══════════════════════════════════
+// INIT
+// ═══════════════════════════════════
+const setupSQL=`create table if not exists att_staff (
+  id uuid default gen_random_uuid() primary key,
+  staff_code text unique, full_name text not null,
+  email text unique, phone text, role text default 'Staff',
+  location_type text default 'clinic',
+  is_active boolean default true, pin text,
+  created_at timestamptz default now()
+);
+create table if not exists att_logs (
+  id uuid default gen_random_uuid() primary key,
+  staff_id uuid references att_staff(id),
+  staff_name text, staff_code text, action text not null,
+  clock_time timestamptz default now(),
+  date_sg date, time_sg text, method text default 'qr',
+  selfie_data text, qr_token_used text, notes text,
+  flagged boolean default false, flag_reason text,
+  created_at timestamptz default now()
+);
+create table if not exists att_qr_tokens (
+  id uuid default gen_random_uuid() primary key,
+  token text unique, valid_from timestamptz,
+  valid_until timestamptz, created_at timestamptz default now()
+);
+create table if not exists att_settings (
+  id uuid default gen_random_uuid() primary key,
+  key text unique, value text
+);
+insert into att_settings (key,value) values
+  ('work_start','09:00'),('work_end','18:00'),
+  ('late_threshold_mins','15'),('qr_rotation_mins','5')
+on conflict (key) do nothing;
+alter table att_staff disable row level security;
+alter table att_logs disable row level security;
+alter table att_qr_tokens disable row level security;
+alter table att_settings disable row level security;`;
+
+window.addEventListener('DOMContentLoaded',()=>{
+  const el=document.getElementById('setup-sql');
+  if(el) el.value=setupSQL;
+  const today=getSGDate();
+  const fd=document.getElementById('filter-date');
+  if(fd) fd.value=today;
+  // check if opened from QR scan
+  const params=new URLSearchParams(window.location.search);
+  if(params.get('scan')){ showPage('scan'); }
+  else { loadTodayLog(); generateQR(); setInterval(loadLiveStatus,30000); }
+});
+</script>
+</body>
+</html>
