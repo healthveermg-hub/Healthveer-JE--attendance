@@ -243,7 +243,7 @@ table tr:hover td{background:#f9fbfa;}
       </div>
       <div class="pin-error" id="admin-pin-error"></div>
       <div style="margin-top:12px;padding:10px;background:var(--bg);border-radius:8px;font-size:11px;color:var(--muted);text-align:center;">
-        Default Admin PIN: <b>Admin@HV26</b><br>Change this in Settings after first login.
+        Default Admin PIN: <b>261234</b><br>Change this in Settings after first login.
       </div>
     </div>
   </div>
@@ -543,7 +543,7 @@ let staffPin = '';
 let adminPin = '';
 let qrSecondsLeft = 300;
 let qrCountdownTimer = null;
-let ADMIN_PIN = 'Admin@HV26'; // default, loaded from DB
+let ADMIN_PIN = '261234'; // default, loaded from DB
 
 // SHIFTS
 const SHIFTS = {
@@ -1072,7 +1072,7 @@ const SETUP_SQL=`-- Run this in Supabase SQL Editor if tables missing
 alter table att_staff add column if not exists default_shift text default 'AM';
 alter table att_logs add column if not exists shift_type text;
 insert into att_settings (key,value) values
-  ('admin_pin','Admin@HV26'),('am_start','08:30'),('am_end','13:00'),
+  ('admin_pin','261234'),('am_start','08:30'),('am_end','13:00'),
   ('pm_start','17:30'),('pm_end','21:00'),('late_mins','15'),('qr_mins','5')
 on conflict (key) do nothing;`;
 
